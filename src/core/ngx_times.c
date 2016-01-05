@@ -18,13 +18,13 @@
  * to run more than NGX_TIME_SLOTS seconds.
  */
 
-#define NGX_TIME_SLOTS   64
+#define NGX_TIME_SLOTS   64//定义了64个时间格子
 
 static ngx_uint_t        slot;
-static ngx_atomic_t      ngx_time_lock;
+static ngx_atomic_t      ngx_time_lock;//时间更新锁
 
-volatile ngx_msec_t      ngx_current_msec;
-volatile ngx_time_t     *ngx_cached_time;
+volatile ngx_msec_t      ngx_current_msec;//毫秒计时
+volatile ngx_time_t     *ngx_cached_time;//ngx_time.h
 //下面是关于时间缓存的四个变量
 volatile ngx_str_t       ngx_cached_err_log_time;
 volatile ngx_str_t       ngx_cached_http_time;
