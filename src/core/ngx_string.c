@@ -51,12 +51,12 @@ ngx_cpystrn(u_char *dst, u_char *src, size_t n)
 }
 
 //¸´ÖÆsrc×Ö·û´®
-u_char *
+u_char *//拷贝字符串  从指定的内存池中
 ngx_pstrdup(ngx_pool_t *pool, ngx_str_t *src)
 {
     u_char  *dst;
 
-    dst = ngx_pnalloc(pool, src->len);
+    dst = ngx_pnalloc(pool, src->len);//src/core/ngx_palloc.c:151
     if (dst == NULL) {
         return NULL;
     }

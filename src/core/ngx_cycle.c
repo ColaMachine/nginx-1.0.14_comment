@@ -58,14 +58,14 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     ngx_core_module_t   *module;
     char                 hostname[NGX_MAXHOSTNAMELEN];
 
-    ngx_timezone_update();
+    ngx_timezone_update();//os/unix/ngx_time.c
 
     /* force localtime update with a new timezone */
 
-    tp = ngx_timeofday();  // 这个宏就是取出之前的ngx_cache_time
+    tp = ngx_timeofday();  // 获取时区这个宏就是取出之前的ngx_cache_time
     tp->sec = 0;
 
-    ngx_time_update(); //这里又进行了一次time更新
+    ngx_time_update(); //这里进行了一次time更新 gangcai shi timezone
 
 
     log = old_cycle->log;
@@ -91,7 +91,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     //配置路径的前缀
     cycle->conf_prefix.len = old_cycle->conf_prefix.len;
-    cycle->conf_prefix.data = ngx_pstrdup(pool, &old_cycle->conf_prefix);
+    cycle->conf_prefix.data = ngx_pstrdup(pool, &old_cycle->conf_prefix);//src/core/ngx_string.c:58 清空string
     if (cycle->conf_prefix.data == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
@@ -99,7 +99,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     
     //系统路径的前缀
     cycle->prefix.len = old_cycle->prefix.len;
-    cycle->prefix.data = ngx_pstrdup(pool, &old_cycle->prefix);
+    cycle->prefix.data = ngx_pstrdup(pool, &old_cycle->prefix);///usr/local/nginx/
     if (cycle->prefix.data == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
@@ -112,10 +112,10 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         ngx_destroy_pool(pool);
         return NULL;
     }
-    ngx_cpystrn(cycle->conf_file.data, old_cycle->conf_file.data,
+    ngx_cpystrn(cycle->conf_file.data, old_cycle->conf_file.data,///home/colamachine/git/nginx-1.0.14_comment/conf/nginx.conf
                 old_cycle->conf_file.len + 1);
 
-    //配置参数设定
+    //配置参数设定 p *&old_cycle->conf_param->data
     cycle->conf_param.len = old_cycle->conf_param.len;
     cycle->conf_param.data = ngx_pstrdup(pool, &old_cycle->conf_param);
     if (cycle->conf_param.data == NULL) {
@@ -124,18 +124,18 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
     //文件路径分配空间并初始化 ，如果old_cycle默认没有指定，则大小为10
-    n = old_cycle->pathes.nelts ? old_cycle->pathes.nelts : 10;
-
-    cycle->pathes.elts = ngx_pcalloc(pool, n * sizeof(ngx_path_t *));
+    n = old_cycle->pathes.nelts ? old_cycle->pathes.nelts : 10;//old_cycle->pathes.nelts : 0
+    //n :10//向实际的数据存储区域；
+    cycle->pathes.elts = ngx_pcalloc(pool, n * sizeof(ngx_path_t *)); //8*88
     if (cycle->pathes.elts == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
     }
 
-    cycle->pathes.nelts = 0;
-    cycle->pathes.size = sizeof(ngx_path_t *);
-    cycle->pathes.nalloc = n;
-    cycle->pathes.pool = pool;
+    cycle->pathes.nelts = 0;//ngx_array_t//组实际元素个数。
+    cycle->pathes.size = sizeof(ngx_path_t *);//8 why数组单个元素的大小，单位是字节。
+    cycle->pathes.nalloc = n;//10 ////容量
+    cycle->pathes.pool = pool;//
     // 每个打开的文件都会放到cycle中的open_files中。每个共享内存段都会放到shared_memory链表中
     //如果原来结构中有文件，那么直接统计原来打开的文件，否则默认20
     if (old_cycle->open_files.part.nelts) {
@@ -144,12 +144,12 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
             n += part->nelts;
         }
 
-    } else {
+    } else { //否则默认20
         n = 20;
     }
     
-    //根据数量初始化，初始化open_files
-    if (ngx_list_init(&cycle->open_files, pool, n, sizeof(ngx_open_file_t))
+    //根据数量初始化，初始化open_files  //ngx_cycle_t defined in /src/core/ngx_cycle.h
+    if (ngx_list_init(&cycle->open_files, pool, n, sizeof(ngx_open_file_t))//从pool 中分配20*48内存给 open_files  ngx_list_t
         != NGX_OK)
     {
         ngx_destroy_pool(pool);
@@ -164,7 +164,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
             n += part->nelts;
         }
 
-    } else {    //否则默认20
+    } else {    //否则默认1
         n = 1;
     }
 
@@ -190,11 +190,11 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     cycle->listening.nalloc = n;
     cycle->listening.pool = pool;
 
-
+    //prev 和next 都指向自己
     ngx_queue_init(&cycle->reusable_connections_queue);
 
     //创建所有模块配置的指针, 这里的ngx_max_module在nginx.c中计算过了
-    cycle->conf_ctx = ngx_pcalloc(pool, ngx_max_module * sizeof(void *));
+    cycle->conf_ctx = ngx_pcalloc(pool, ngx_max_module * sizeof(void *));//43*8 conf_ctx  配置上下文数组
     if (cycle->conf_ctx == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
@@ -205,7 +205,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         ngx_log_error(NGX_LOG_EMERG, log, ngx_errno, "gethostname() failed");
         ngx_destroy_pool(pool);
         return NULL;
-    }
+    }// p *hostname@30"colamachine-Latitude-3330
 
     /* on Linux gethostname() silently truncates name that does not fit */
 
@@ -223,24 +223,24 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     //调用核心模块的配置创建函数， cycle->conf_ctx 中对应的指针指向创建的配置
     //创建所有core module的configure.它通过调用每个core module的ngx_xxx_module_create_conf方法，来创建对应的conf，
     //然后将这个conf对象保存在全局的conf_ctx中
-    for (i = 0; ngx_modules[i]; i++) {
+    for (i = 0; ngx_modules[i]; i++) {//1163022147//数组长度可能42
         if (ngx_modules[i]->type != NGX_CORE_MODULE) {  //筛选出core模块
         	//非核心模块直接跳过
             continue;
         }
-        
+        //core events http
         //这里只对核心模块进行处理，核心模块就是ngx_core_module，ngx_errlog_module，ngx_events_module和ngx_http_module
         //实际上只有ngx_core_module_create_conf
 
         //得到core modules
-        module = ngx_modules[i]->ctx;
-
+        module = ngx_modules[i]->ctx;///*模块的上下文，不同种类的模块有不同的上下文，因此实现了四种结构体*/
+        // ngx_core_module_s defined in ngx_conf_file.c   p module  ngx_core_module_t
         //如果create_conf存在，则直接创建config
-        if (module->create_conf) {
+        if (module->create_conf) {// p module->name  "core"
 			//core的create_conf回调函数，实际上指向ngx_core_module_crate_conf
             rv = module->create_conf(cycle); //对每个模块调用模块内部的钩子ngx_xxx_module_create_conf，当然第一个模块是core
-            if (rv == NULL) {
-                ngx_destroy_pool(pool);
+            if (rv == NULL) {//ngx_core_module_create_conf (cycle=0x6a0050) at src/core/nginx.c:945
+                ngx_destroy_pool(pool);//
                 return NULL;
             }
             //保存config，这里看到conf_ctx里面就是放对应模块的main conf.
@@ -253,13 +253,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     //对指令结构进行初始化:参数，内存池
     ngx_memzero(&conf, sizeof(ngx_conf_t));
-    /* STUB: init array ? */
+    /* STUB: init array ? *///10 × 16 
     conf.args = ngx_array_create(pool, 10, sizeof(ngx_str_t));
     if (conf.args == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
     }
-
+	// 16384
     conf.temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log);
     if (conf.temp_pool == NULL) {
         ngx_destroy_pool(pool);
@@ -278,17 +278,17 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     log->log_level = NGX_LOG_DEBUG_ALL;
 #endif
 	//panzg:内部解析nginx配置文件,此处是解析nginx命令行参数"-g"加入的配置
-    if (ngx_conf_param(&conf) != NGX_CONF_OK) {
+    if (ngx_conf_param(&conf) != NGX_CONF_OK) {//at src/core/ngx_conf_file.c:65
         environ = senv;
         ngx_destroy_cycle_pools(&conf);
         return NULL;
     }
-
+// &cycle->conf_file= /home/colamachine/git/nginx-1.0.14_comment/conf/nginx.conf
     //第二次调用ngx_conf_parse函数，此处才是解析nginx配置文件
 	//开始解析配置文件了，解析配置文件它会一行行读取，然后如果遇到指令
     //则会查找到对应的ngx_command_t对象，然后执行对应的回调set方法。这里所有动作都在ngx_conf_parse这个函数中进行.
     //这函数是立即模块的核心函数，对配置文件边解析边处理
-    if (ngx_conf_parse(&conf, &cycle->conf_file) != NGX_CONF_OK) {
+    if (ngx_conf_parse(&conf, &cycle->conf_file) != NGX_CONF_OK) {// src/core/ngx_conf_file.c:108
         environ = senv;
         ngx_destroy_cycle_pools(&conf);
         return NULL;

@@ -49,7 +49,7 @@ ngx_module_t  ngx_errlog_module = {
 
 
 static ngx_log_t        ngx_log;
-static ngx_open_file_t  ngx_log_file;
+static ngx_open_file_t  ngx_log_file;//ngx_conf_file.h 118
 ngx_uint_t              ngx_use_stderr = 1;
 
 //数组err_levels与nginx日志级别对应
@@ -267,10 +267,10 @@ ngx_log_init(u_char *prefix)
 {
     u_char  *p, *name;
     size_t   nlen, plen;
-
-    ngx_log.file = &ngx_log_file;
-    ngx_log.log_level = NGX_LOG_NOTICE;
-
+// ngx_log是定义在ngx_log.c 51行 是ngx_log_t结构体 定义在ngx_log.h 48行
+    ngx_log.file = &ngx_log_file;//匹配 //ngx_log_file 是static变量 ngx_log静态变量ngx_open_file_t 在文件开头定义的 
+    ngx_log.log_level = NGX_LOG_NOTICE;//默认是通知级别 6
+	//这里的name 感觉多余
     name = (u_char *) NGX_ERROR_LOG_PATH;  // 设置nginx_errlog的path，这个宏在ngx_auto_config.h中有定义“logs/error.log”
 
     /*
@@ -278,7 +278,7 @@ ngx_log_init(u_char *prefix)
      * condition is always false and unreachable code
      */
 
-    nlen = ngx_strlen(name);
+    nlen = ngx_strlen(name);//logs/error.log 14
 
     if (nlen == 0) {
         ngx_log_file.fd = ngx_stderr;  //如果没有设置日志输出文件，就默认采用标准错误输出流, 这里几乎只是做一个预防性的代码
@@ -293,33 +293,33 @@ ngx_log_init(u_char *prefix)
     if (name[0] != '/') {
 #endif
         // 检查编译的时候是否有prefix，如果有prefix就将log路径串起来
-        if (prefix) {
+        if (prefix) {//prefix 在运行的时候yong --prefix指定
             plen = ngx_strlen(prefix);
 
         } else {
 #ifdef NGX_PREFIX
-            prefix = (u_char *) NGX_PREFIX;
-            plen = ngx_strlen(prefix);
+            prefix = (u_char *) NGX_PREFIX;///usr/local/nginx/
+            plen = ngx_strlen(prefix);//plen 是prefix的长度 nlen是name的长度//17
 #else
             plen = 0;
 #endif
         }
-        // 检查是否有路径前缀，如有就加到前面，使用绝对路径上的日志文件，如果没有，使用当前目录下的日志文件
+        // 检查是否有路径前缀，如有就加到前面，使用绝对路径上的日志文件，如果没有，使用/usr/local/nginx目录下的日志文件
         if (plen) {
             name = malloc(plen + nlen + 2);
             if (name == NULL) {
                 return NULL;
             }
 
-            p = ngx_cpymem(name, prefix, plen);
+            p = ngx_cpymem(name, prefix, plen);//把prefix 拷贝到 name中 prefix+logpath 地址+plen的新指针返回
 
-            if (!ngx_path_separator(*(p - 1))) {
-                *p++ = '/';
+            if (!ngx_path_separator(*(p - 1))) {//判断prefix结尾的字符是不是/ 如国不是的话加上/ 
+                *p++ = '/';//diyige zifu shi / 
             }
 
-            ngx_cpystrn(p, (u_char *) NGX_ERROR_LOG_PATH, nlen + 1);
+            ngx_cpystrn(p, (u_char *) NGX_ERROR_LOG_PATH, nlen + 1);//usr/local/nginx/log/error.log
 
-            p = name;
+            p = name;//指针指向name
         }
     }
     // 只写追加方式打开，如果不存在则创建， 这里也是windows 和unix 分开走
@@ -337,14 +337,14 @@ ngx_log_init(u_char *prefix)
                        ngx_open_file_n " \"%s\" failed", name);
 #endif
 
-        ngx_log_file.fd = ngx_stderr;
+        ngx_log_file.fd = ngx_stderr;//如果创建失败 就是ngx_stderr
     }
 
-    if (p) {
-        ngx_free(p);
+    if (p) {//free malloc
+        ngx_free(p);//释放了分配的字符串空间/usr/local/nginx/logs/error.log
     }
 
-    return &ngx_log;
+    return &ngx_log;// the variable static ngx_log ngx_log_t  
 }
 
 

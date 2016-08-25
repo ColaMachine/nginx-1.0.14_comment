@@ -62,16 +62,16 @@ static ngx_uint_t argument_number[] = {
 /*解析nginx配置参数*/
 char *
 ngx_conf_param(ngx_conf_t *cf)
-{
+{//从cycle中读取conf_param 把他对应到conf的conf_file下的buffer中
     char             *rv;
     ngx_str_t        *param;
     ngx_buf_t         b;
     ngx_conf_file_t   conf_file;
 
-    param = &cf->cycle->conf_param;
-
-    if (param->len == 0) {
-        return NGX_CONF_OK;
+    param = &cf->cycle->conf_param;//p **&cf->cycle->conf_param->data
+// p *&cf->cycle->conf_param->len
+    if (param->len == 0) {  //直接返回
+        return NGX_CONF_OK;//fan hui 
     }
 	//初始化保存配置信息的结构体
     ngx_memzero(&conf_file, sizeof(ngx_conf_file_t));
@@ -122,11 +122,11 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
     prev = NULL;
 #endif
 
-    if (filename) {
+    if (filename) {//= {len = 58,  data = 0x694251 "/home/colamachine/git/nginx-1.0.14_comment/conf/nginx.conf"}
 
         /* open configuration file */
-        // 打开配置文件
-        fd = ngx_open_file(filename->data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
+        // 打开配置文件 , 打开指定文件
+        fd = ngx_open_file(filename->data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);//O_RDONLY 0
         if (fd == NGX_INVALID_FILE) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, ngx_errno,
                                ngx_open_file_n " \"%s\" failed",
@@ -134,33 +134,33 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
             return NGX_CONF_ERROR;
         }
 
-        prev = cf->conf_file;
-
-        cf->conf_file = &conf_file;
-        // 获取文件信息
-        if (ngx_fd_info(fd, &cf->conf_file->file.info) == -1) {
+        prev = cf->conf_file;//记住之前旧的打开文件//是空的null
+//conf_file还未初始化过
+        cf->conf_file = &conf_file;//定义新的 ngx_conf_file_t ngx_conf_t的conf_file
+        // 获取文件信息 p *(&cf->conf_file.file.info)
+        if (ngx_fd_info(fd, &cf->conf_file->file.info) == -1) {//#define ngx_fd_info(fd, sb)      fstat(fd, sb)//由文件描述词取得文件状态
             ngx_log_error(NGX_LOG_EMERG, cf->log, ngx_errno,
                           ngx_fd_info_n " \"%s\" failed", filename->data);
         }
-
-        cf->conf_file->buffer = &buf;
-
-        buf.start = ngx_alloc(NGX_CONF_BUFFER, cf->log);
-        if (buf.start == NULL) {
+        ///* 如果ngx_buf_t缓冲区用于内存，那么start指向这段内存的起始地址 */
+        cf->conf_file->buffer = &buf;//这里的buf还没有初始化//ngx_buf_t :http://sofar.blog.51cto.com/353572/1327728
+        //这里开始初始化内存分配//4096 大小
+        buf.start = ngx_alloc(NGX_CONF_BUFFER, cf->log);//src/os/unix/ngx_alloc.c:19 NGX_CONF_BUFFER=4096
+        if (buf.start == NULL) {//0x69c020
             goto failed;
         }
 
-        buf.pos = buf.start;
-        buf.last = buf.start;
-        buf.end = buf.last + NGX_CONF_BUFFER;
+        buf.pos = buf.start;//0x69c020
+        buf.last = buf.start;//0x69c020
+        buf.end = buf.last + NGX_CONF_BUFFER;//0x69d020 == 16^3
         buf.temporary = 1;
         // 保存配置文件的基本信息
-        cf->conf_file->file.fd = fd;
+        cf->conf_file->file.fd = fd;//把打开的ngxinx.conf文件 挂到
         cf->conf_file->file.name.len = filename->len;
         cf->conf_file->file.name.data = filename->data;
         cf->conf_file->file.offset = 0;
         cf->conf_file->file.log = cf->log;
-        cf->conf_file->line = 1;
+        cf->conf_file->line = 1;//dang qian de hangshu 
 
         type = parse_file;
 
@@ -176,7 +176,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
     for ( ;; ) {
 		//读入一个token，一般是一行
 		//读到的配置参数放到: (ngx_str_t*)(*((*cf).args)).elts
-        rc = ngx_conf_read_token(cf);
+        rc = ngx_conf_read_token(cf);//451src/core/ngx_conf_file.c:471
 
         /*
          * ngx_conf_read_token() may return
@@ -226,7 +226,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
         /* rc == NGX_OK || rc == NGX_CONF_BLOCK_START */
         //判断cf是否有handler回调，如果有的话，优先调用handler回调，如果没有，则会进入ngx_conf_handler进行一般处理
         //特别说一下，http的模块使用handler是ngx_http_block，具体请看ngx_http.c
-        if (cf->handler) {
+        if (cf->handler) {//一开始是没有的
 
             /*
              * the custom handler, i.e., that is used in the http's
@@ -249,7 +249,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
         }
 
         //否则进入一般处理， 调用ngx_conf_handler对当前的token进行处理
-        rc = ngx_conf_handler(cf, rc);
+        rc = ngx_conf_handler(cf, rc);//t src/core/ngx_conf_file.c:297
 
         if (rc == NGX_ERROR) {
             goto failed;
@@ -286,15 +286,15 @@ done:
 
 /*主要完成配置文件的解析工作*/
 static ngx_int_t
-ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
-{
+ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)///nginx/src/core/ngx_conf_file.h http://book.2cto.com/201311/37351.html
+{//p  (cf->conf_file->file)   p  *(cf->conf_file->buffer) 解析到的当前内容 \n\n#error_log   p  (cf->conf_file->line) 3
     char           *rv;
     void           *conf, **confp;
     ngx_uint_t      i, multi;
     ngx_str_t      *name;
     ngx_command_t  *cmd;
     // 获取token这个关键字命令的名字
-    name = cf->args->elts;
+    name = cf->args->elts;// p name->data worker_processes
 
     multi = 0;
     // 遍历每个模块，检查token（就是上面的name，比如这里的name可能是worker_process）是在哪个模块中被定义，并且进行处理
@@ -308,7 +308,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
             continue;
         }
 
-        cmd = ngx_modules[i]->commands;
+        cmd = ngx_modules[i]->commands;//ngx_core_commands i=0   p ngx_modules[i]->commands->name
         if (cmd == NULL) {
             continue;
         }
@@ -317,11 +317,11 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
         //遍历模块的command，比较名字，然后调用回调函数set
         for ( /* void */ ; cmd->name.len; cmd++) {
             // 这里先比较name（配置文件中的命令）和cmd->name（模块中定义的命令）的长度，再比较内容
-            if (name->len != cmd->name.len) {
+            if (name->len != cmd->name.len) {// p name->data worker_processes p cmd->name  cmd is ngx_core_commands
                 continue;
             }
 
-            if (ngx_strcmp(name->data, cmd->name.data) != 0) {
+            if (ngx_strcmp(name->data, cmd->name.data) != 0) {//比较字符串是否相等
                 continue;
             }
 
@@ -355,13 +355,13 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
 
             if (!(cmd->type & NGX_CONF_ANY)) {
 
-                if (cmd->type & NGX_CONF_FLAG) {
+                if (cmd->type & NGX_CONF_FLAG) {//bu cheng li value is on or off
 
                     if (cf->args->nelts != 2) {
                         goto invalid;
                     }
 
-                } else if (cmd->type & NGX_CONF_1MORE) {
+                } else if (cmd->type & NGX_CONF_1MORE) {//zhi jie zhi xing zhe li has only one arg
 
                     if (cf->args->nelts < 2) {
                         goto invalid;
@@ -378,7 +378,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
                     goto invalid;
 
                 } else if (!(cmd->type & argument_number[cf->args->nelts - 1]))
-                {
+                {//dou bu manzu
                     goto invalid;
                 }
             }
@@ -407,7 +407,7 @@ ngx_conf_handler(ngx_conf_t *cf, ngx_int_t last)
             }
 
             //调用对应命令的处理函数，比如worker_process这命令在nginx.c中对应的处理函数是ngx_conf_set_num_slot，这里的set就是ngx_conf_set_num_slot
-            rv = cmd->set(cf, cmd, conf);
+            rv = cmd->set(cf, cmd, conf);//src/core/ngx_conf_file.c:1206
 
             if (rv == NGX_CONF_OK) {
                 return NGX_OK;
@@ -468,20 +468,20 @@ ngx_conf_read_token(ngx_conf_t *cf)
     s_quoted = 0;
     d_quoted = 0;
 
-    cf->args->nelts = 0;
-    b = cf->conf_file->buffer;
-    start = b->pos;
-    start_line = cf->conf_file->line;
-
-    file_size = ngx_file_size(&cf->conf_file->file.info);
+    cf->args->nelts = 0;//ngx_array_t //读完之后再读需要置为0
+    b = cf->conf_file->buffer;//p *(cf->conf_file->buffer) 0x69c044 "\n\n#error_log  logs/error.log;//just create lately
+    start = b->pos;//0x69c044 "\n\n#error_log
+    start_line = cf->conf_file->line;//3
+	//2684
+    file_size = ngx_file_size(&cf->conf_file->file.info); //0x7fffffffdf28  file:ngx_file_t  st_size 2684 ngxin.conf is 2.7k so it's nginx.conf的文件大小
     // 循环解析配置文件，逐字符
-    for ( ;; ) {
+    for ( ;; ) {//
 
-        if (b->pos >= b->last) {
+        if (b->pos >= b->last) {//0x69c020  0x69c020第二进入的时候 b->pos:0x69c021 b->last0x69ca9d不再满足 直接跳过 dao 556
+//cf : ngx_conf_t   cf->conf_file : ngx_conf_file_t   //di san ci 
+            if (cf->conf_file->file.offset >= file_size) { //0  2685  bu cheng li  go 502 判断是否文件的读取位置大于文件的大小 以防止读取越界
 
-            if (cf->conf_file->file.offset >= file_size) {
-
-                if (cf->args->nelts > 0) {
+                if (cf->args->nelts > 0) {//0 
 
                     if (cf->conf_file->file.fd == NGX_INVALID_FILE) {
                         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -499,12 +499,12 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 return NGX_CONF_FILE_DONE;
             }
 
-            len = b->pos - start;
+            len = b->pos - start;//0 一开始文件的开始和文件的当前位置是一样的
 
-            if (len == NGX_CONF_BUFFER) {
+            if (len == NGX_CONF_BUFFER) {//buchengli 
                 cf->conf_file->line = start_line;
 
-                if (d_quoted) {
+                if (d_quoted) {//go 530
                     ch = '"';
 
                 } else if (s_quoted) {
@@ -523,24 +523,24 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 return NGX_ERROR;
             }
 
-            if (len) {
+            if (len) {//0 go 526
                 ngx_memmove(b->start, start, len);
             }
 
-            size = (ssize_t) (file_size - cf->conf_file->file.offset);
+            size = (ssize_t) (file_size - cf->conf_file->file.offset);//2685还有多少内容大小没读
 
-            if (size > b->end - (b->start + len)) {
+            if (size > b->end - (b->start + len)) {// b->end:0x69d020  start:0x69c020 len :0  4096 false
                 size = b->end - (b->start + len);
             }
-            //读出配置文件内容到缓冲区b中
-            n = ngx_read_file(&cf->conf_file->file, b->start + len, size,
-                              cf->conf_file->file.offset);
+            //读出配置文件内容到缓冲区b中  ngx_conf_file_t &cf->conf_file  &cf->conf_file->file ngx_file_t 
+            n = ngx_read_file(&cf->conf_file->file, b->start + len, size,//src/os/unix/ngx_files.c:21 yong pread duqu wenjian
+                              cf->conf_file->file.offset);//参数1 读取的来源 参数2 写的地址 读取内容长度  读取的便宜位置 len是已经读取的长度
 
-            if (n == NGX_ERROR) {
+            if (n == NGX_ERROR) {// n shi是已经读取的长度
                 return NGX_ERROR;
             }
 
-            if (n != size) {
+            if (n != size) {//或者报错了 如果不想等 说明 已经读到文件末尾了
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    ngx_read_file_n " returned "
                                    "only %z bytes instead of %z",
@@ -548,31 +548,32 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 return NGX_ERROR;
             }
 
-            b->pos = b->start + len;
-            b->last = b->pos + n;
-            start = b->start;
-        }
-
-        ch = *b->pos++;
+            b->pos = b->start + len;// p b->pos 打印出ngxin.conf文件内容
+            b->last = b->pos + n;//每次读取完之后b->last 发生变化 b->pos =0x6a8020 n=2684  b->last=0x6a8020
+            start = b->start;// 0x6a8020
+        }//   第一次读到 index  index.html index.htm;
+        
+        // di er ci jin ru zhe li 
+        ch = *b->pos++;////0x69c021 ch ='\n'  刚读入的时候 是#
         //检查是否到行尾
         if (ch == LF) {
-            cf->conf_file->line++;
+            cf->conf_file->line++; 
             // 如果前面一行是注释行，那么现在开始设置新行的标志为：非注释行
-            if (sharp_comment) {
+            if (sharp_comment) {//bu zhixin
                 sharp_comment = 0;
             }
         }
-        //注释行的话，跳过
+        //注释行的话，跳过 如果出现了# 就会一直等到LF换行符出现
         if (sharp_comment) {
-            continue;
+            continue;// di 3 ci continue  碰到这种#情况 会一直执行ch = *b->pos++ 直到碰到lf换行为止
         }
 
-        if (quoted) {
+        if (quoted) {//buzhixing 
             quoted = 0;
             continue;
         }
 
-        if (need_space) {
+        if (need_space) {//buzhixing  
             if (ch == ' ' || ch == '\t' || ch == CR || ch == LF) {
                 last_space = 1;
                 need_space = 0;
@@ -597,16 +598,16 @@ ngx_conf_read_token(ngx_conf_t *cf)
                  return NGX_ERROR;
             }
         }
-
-        if (last_space) {
+        //last_space always is 1
+        if (last_space) {  // 在函数最开头定义了last_space =1  后来发现第一列是#  把sharp_comment指定为1 然后一直等到换行符出现
             if (ch == ' ' || ch == '\t' || ch == CR || ch == LF) {
-                continue;
+                continue;// \n 
             }
+            // at the second time start = "1;\n\n" start记录了有效行的开始位置
+            start = b->pos - 1;//0x69c022 //start start 是指向 要解析的字符串的 指向orker_processes 开头
+            start_line = cf->conf_file->line;//2  3 
 
-            start = b->pos - 1;
-            start_line = cf->conf_file->line;
-
-            switch (ch) {
+            switch (ch) {//#
 
             case ';':
             case '{':
@@ -632,7 +633,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 return NGX_CONF_BLOCK_DONE;
 
             case '#':
-                sharp_comment = 1;
+                sharp_comment = 1;//dierci 
                 continue;
 
             case '\\':
@@ -653,10 +654,10 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 continue;
 
             default:
-                last_space = 0;
+                last_space = 0;// worker_processes next loop direct go else
             }
 
-        } else {
+        } else {//b->pos =  0x69c032 rker_processes //正常逻辑分支 是有效行的处理 表示已经读到了末尾的字符串//上一个单词不是空格
             if (ch == '{' && variable) {
                 continue;
             }
@@ -691,18 +692,18 @@ ngx_conf_read_token(ngx_conf_t *cf)
                        || ch == ';' || ch == '{')
             {
             	//空格、TAB、换行、分号，大括号等
-                last_space = 1;
-                found = 1;
-            }
-
-            if (found) {//找到了一个字符串
-                word = ngx_array_push(cf->args);
+                last_space = 1; //第一行处理完毕之后 
+                found = 1;//then to push  string worker_processes to cf->args  zh找到第二行worker_processes开始后寻找一个换行符
+            }//first we found the space " " so we get the string "worker_processes" push into args,src= b->pos-1 and set the last_space=1 then we found the "1" so last_space set to 0 and the start set to b->pos-1 
+            //then we found the ";" so we set the last_space to 0 and push 1 to args , if is ";" then return ngx_ok to row 191
+            if (found) {//找到了一个 full word  key or value 字符串
+                word = ngx_array_push(cf->args);// at src/core/ngx_array.c:62 word {len = 0, data = 0x0} elt = (u_char *) a->elts + a->size * a->nelts;  a->nelts++;
                 if (word == NULL) {
                     return NGX_ERROR;
                 }
-
-                word->data = ngx_pnalloc(cf->pool, b->pos - start + 1);
-                if (word->data == NULL) {
+                    // p b->pos    1;\n\n#error_log   start:worker_processes  1;\n b->pos ++ every loop start change when find lf
+                word->data = ngx_pnalloc(cf->pool, b->pos - start + 1);// word is an ngx_str_t cf->args is ngx_array_t   so the word is not given an memery
+                if (word->data == NULL) {// ""
                     return NGX_ERROR;
                 }
 
@@ -710,10 +711,10 @@ ngx_conf_read_token(ngx_conf_t *cf)
 				//在程序启动阶段做的，性能不是最最重要的，而是配置文件的灵活性
 				//解析完命令后，会在字符串结尾加'\0'结尾符
                 for (dst = word->data, src = start, len = 0;
-                     src < b->pos - 1;
-                     len++)
-                {
-                    if (*src == '\\') {
+                     src < b->pos - 1;//b->pos = 1;\n\n  b->pos =\n\n#error_log
+                     len++)//len =0 
+                {//
+                    if (*src == '\\') {//!= 将\n \t \a转成控制字符
                         switch (src[1]) {
                         case '"':
                         case '\'':
@@ -738,15 +739,15 @@ ngx_conf_read_token(ngx_conf_t *cf)
                         }
 
                     }
-                    *dst++ = *src++;
+                    *dst++ = *src++;//copy data src = worder_processes d读完之后再读1；dst = w dst=o dst =r
                 }
-                *dst = '\0';
+                *dst = '\0';//dst the end of work_processes
                 word->len = len;
 
                 if (ch == ';') {
                 	// Nginx的每一行配置以 ';' 结尾，因此此处返回OK，表面解析到一个token
-                    return NGX_OK;
-                }
+                    return NGX_OK;//worker_processes  1; fanhui这个时候存着一个数组 第一个元素是worder_processes 第二个元素是1
+                }//src/core/ngx_conf_file.c:229
 
                 if (ch == '{') {
                     return NGX_CONF_BLOCK_START;
@@ -829,7 +830,7 @@ ngx_conf_full_name(ngx_cycle_t *cycle, ngx_str_t *name, ngx_uint_t conf_prefix)
     u_char     *p, *n, *prefix;
     ngx_int_t   rc;
 
-    rc = ngx_conf_test_full_name(name);
+    rc = ngx_conf_test_full_name(name);//测试文件路径是不是/开头
 
     if (rc == NGX_OK) {
         return rc;
@@ -908,7 +909,7 @@ ngx_conf_test_full_name(ngx_str_t *name)
 #else
 
     if (name->data[0] == '/') {
-        return NGX_OK;
+        return NGX_OK;//直接走这里
     }
 
     return NGX_DECLINED;
@@ -1211,13 +1212,13 @@ ngx_conf_set_num_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_conf_post_t  *post;
 
 
-    np = (ngx_int_t *) (p + cmd->offset);
+    np = (ngx_int_t *) (p + cmd->offset);// p:0x694f90  offset 24 p cmd->offset
 
-    if (*np != NGX_CONF_UNSET) {
+    if (*np != NGX_CONF_UNSET) {//-1   
         return "is duplicate";
     }
 
-    value = cf->args->elts;
+    value = cf->args->elts;// p cf->args   (ngx_array_t
     *np = ngx_atoi(value[1].data, value[1].len); //把value后面的buffer强制转为一个str
     if (*np == NGX_ERROR) {
         return "invalid number";

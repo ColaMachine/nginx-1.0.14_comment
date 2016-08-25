@@ -15,7 +15,7 @@
 //size:	每个元素所占用的内存大小
 ngx_list_t *
 ngx_list_create(ngx_pool_t *pool, ngx_uint_t n, size_t size)
-{
+{//http://blog.csdn.net/livelylittlefish/article/details/6599065
     ngx_list_t  *list;
 
     // 先创建一个ngx_list_t指针

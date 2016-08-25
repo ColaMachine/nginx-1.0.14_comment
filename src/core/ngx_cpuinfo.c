@@ -75,22 +75,22 @@ ngx_cpuinfo(void)
     u_char    *vendor;
     uint32_t   vbuf[5], cpu[4], model;
 
-    vbuf[0] = 0;
-    vbuf[1] = 0;
-    vbuf[2] = 0;
-    vbuf[3] = 0;
-    vbuf[4] = 0;
+    vbuf[0] = 0;//13
+    vbuf[1] = 0;//1970169159
+    vbuf[2] = 0;//1231384169
+    vbuf[3] = 0;//1818588270
+    vbuf[4] = 0;//0
 
     ngx_cpuid(0, vbuf);
 
     vendor = (u_char *) &vbuf[1];
 
-    if (vbuf[0] == 0) {
+    if (vbuf[0] == 0) {//13
         return;
     }
 
-    ngx_cpuid(1, cpu);
-
+    ngx_cpuid(1, cpu);// src/core/ngx_cpuinfo.c:54
+//cpu 0 198313  cpu 1 0  2:0 3:0
     if (ngx_strcmp(vendor, "GenuineIntel") == 0) {
 
         switch ((cpu[0] & 0xf00) >> 8) {
@@ -104,8 +104,8 @@ ngx_cpuinfo(void)
         case 6:
             ngx_cacheline_size = 32;
 
-            model = ((cpu[0] & 0xf0000) >> 8) | (cpu[0] & 0xf0);
-
+            model = ((cpu[0] & 0xf0000) >> 8) | (cpu[0] & 0xf0);//zhixing zhe li model=928
+            //1111 0000 0000 0000 0000           1111 0000
             if (model >= 0xd0) {
                 /* Intel Core, Core 2, Atom */
                 ngx_cacheline_size = 64;

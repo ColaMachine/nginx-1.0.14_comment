@@ -119,9 +119,9 @@ ngx_crc32_table_init(void)
         return NGX_ERROR;
     }
 
-    p = ngx_align_ptr(p, ngx_cacheline_size);
+    p = ngx_align_ptr(p, ngx_cacheline_size);//ngx_cacheline_size= 64
 
-    ngx_memcpy(p, ngx_crc32_table16, 16 * sizeof(uint32_t));
+    ngx_memcpy(p, ngx_crc32_table16, 16 * sizeof(uint32_t));//拷贝到堆中
 
     ngx_crc32_table_short = p;
 

@@ -43,11 +43,11 @@ ngx_timezone_update(void)
     struct tm  *t;
     char        buf[4];
 
-    s = time(0);
+    s = time(0);//直接执行这里//time获取 时间戳 
 
-    t = localtime(&s);
+    t = localtime(&s);//将时间戳转换成本地时间 是一个tm结构体
 
-    strftime(buf, 4, "%H", t);
+    strftime(buf, 4, "%H", t);//http://baike.baidu.com/link?url=_n6t0hgL14zIfO1Ua2gcukVtvP9P9laG69blf6_eep68ICsrDF1GSxXwZntwdnAVsNjnDZNs9fse3e0l2cLgEas
 
 #endif
 }
@@ -67,8 +67,8 @@ ngx_localtime(time_t s, ngx_tm_t *tm)
 
 #endif
 
-    tm->ngx_tm_mon++;
-    tm->ngx_tm_year += 1900;
+    tm->ngx_tm_mon++;//原来的mon是6 实际是7月份 需要++才能表示
+    tm->ngx_tm_year += 1900;//ngx_tm_year是116 实际是2016
 }
 
 

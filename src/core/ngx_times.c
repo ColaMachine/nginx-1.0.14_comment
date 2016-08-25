@@ -20,10 +20,10 @@
 
 #define NGX_TIME_SLOTS   64
 
-static ngx_uint_t        slot;
-static ngx_atomic_t      ngx_time_lock;
+static ngx_uint_t        slot;//typedef uintptr_t ngx_uint_t; http://book.2cto.com/201402/40245.html
+static ngx_atomic_t      ngx_time_lock;//volatile intptr_t ngx_atomic.c
 
-volatile ngx_msec_t      ngx_current_msec;
+volatile ngx_msec_t      ngx_current_msec; //ngx_time.h
 volatile ngx_time_t     *ngx_cached_time;
 //下面是关于时间缓存的四个变量
 volatile ngx_str_t       ngx_cached_err_log_time;
@@ -65,7 +65,7 @@ ngx_time_init(void)
     ngx_cached_http_log_time.len = sizeof("28/Sep/1970:12:00:00 +0600") - 1;
     ngx_cached_http_log_iso8601.len = sizeof("1970-09-28T12:00:00+06:00") - 1;
 
-    ngx_cached_time = &cached_time[0];
+    ngx_cached_time = &cached_time[0];//p sizeof(cached_time)/sizeof(cached_time[0]) = 64 
 
     ngx_time_update();
 }
@@ -78,19 +78,18 @@ ngx_time_init(void)
 void
 ngx_time_update(void)
 {
-    u_char          *p0, *p1, *p2, *p3;
-    ngx_tm_t         tm, gmt;
+    u_char          *p0, *p1, *p2, *p3;//p0 p1 p2 p3是四种不同格式的日期字符串
+    ngx_tm_t         tm, gmt;//tm 是本地时间 gmt是格林威治时间 typedef struct tm             ngx_tm_t;http://blog.csdn.net/xuefu2008/article/details/4656802
     time_t           sec;
     ngx_uint_t       msec;
-    ngx_time_t      *tp;
-    struct timeval   tv;
+    ngx_time_t      *tp;//ngx_times.h是有毫秒 和秒 还有时区概念的
+    struct timeval   tv;//jiegou long int tv_sec miaoshu long int tv_usec wei miao shu struct {time_t (long int )tv_sec (long int)suseconds_t tv_usec}
 	//使用ngx_time_lock进行加锁，一致性问题
-    if (!ngx_trylock(&ngx_time_lock)) {
-        return;
+    if (!ngx_trylock(&ngx_time_lock)) {//调用ngx_atomic_cmp_set 原子化判断值是不是0如果是的话就设置为1 os/unix/ngx_gcc_atomic_amd64.h
+        return;//if system support then angx_atomic.h OSAtomicCompareAndSwap64Barrier else look up in ngx_gcc_atomic_x86.c  
     }
-
-    ngx_gettimeofday(&tv); //宏定义，获取时间，？unix和window走的是不同函数，但是在这里统一被封装了 ？
-
+    //获得当前时间
+    ngx_gettimeofday(&tv);//diao yong gettimeofday //宏定义，获取时间，？unix和window走的是不同函数，但是在这里统一被封装了 ？{tv_sec = 1460646545, tv_usec = 383213}
     sec = tv.tv_sec;
     msec = tv.tv_usec / 1000;   //从微秒usec中计算毫秒msec
     // 获取毫妙精度的时间，可以看出nginx精确到毫秒
@@ -98,7 +97,7 @@ ngx_time_update(void)
 	//有关cache_time的作用，请见其定义处,需要重点理解这种设计思想
     tp = &cached_time[slot];
 
-    if (tp->sec == sec) {
+    if (tp->sec == sec) {//如果cache_time[]缓存的秒数是一样的 那么更新他的毫秒数就可以了
         tp->msec = msec;
         ngx_unlock(&ngx_time_lock);
         return;
@@ -111,17 +110,19 @@ ngx_time_update(void)
         slot++;
     }
     // 每调用ngx_time_update（）一次，保存一次时间
-    tp = &cached_time[slot];
+    tp = &cached_time[slot];//获取下一个格子缓存里的ngx_time_t 然后把他设置为当前时间
 
     tp->sec = sec;
     tp->msec = msec;
 	//将获取到的时间转成可读的时间格式，保存在gmt结构体中
-    ngx_gmtime(sec, &gmt);
-
+    ngx_gmtime(sec, &gmt);//gmt .year .month .mday .hour .min .sec is seted the sec value  at src/core/ngx_times.c:289
+/*	{tm_sec = 5, tm_min = 9, tm_hour = 15, tm_mday = 14, tm_mon = 4, 
+		  tm_year = 2016, tm_wday = 4, tm_yday = 32767, tm_isdst = 6887536, 
+		    tm_gmtoff = 17, tm_zone = 0x86 */
 	//p0用来记录http请求的时间
     // 把时间转为http格式的时间字符串,p0就设置为诸如“Fri, 27 Jul 2012 01:09:17 GMT”
     p0 = &cached_http_time[slot][0];
-
+//p0 指向缓存的http时间数组的【0】赋值为当前的可读时间字符串
     (void) ngx_sprintf(p0, "%s, %02d %s %4d %02d:%02d:%02d GMT",
                        week[gmt.ngx_tm_wday], gmt.ngx_tm_mday,
                        months[gmt.ngx_tm_mon - 1], gmt.ngx_tm_year,
@@ -134,9 +135,9 @@ ngx_time_update(void)
 
 #elif (NGX_HAVE_GMTOFF)
 
-    ngx_localtime(sec, &tm);
-    cached_gmtoff = (ngx_int_t) (tm.ngx_tm_gmtoff / 60);
-    tp->gmtoff = cached_gmtoff;
+    ngx_localtime(sec, &tm);//http://www.cnblogs.com/li-hao/archive/2013/03/16/2963371.html
+    cached_gmtoff = (ngx_int_t) (tm.ngx_tm_gmtoff / 60);// tm.ngx_tm_gmtoff =28800 /60之后是480 表示时区偏移量为480分钟
+    tp->gmtoff = cached_gmtoff;//执行这里 
 
 #else
 
@@ -147,7 +148,7 @@ ngx_time_update(void)
 #endif
 
     // p1存诸如“2012/07/27 09:09:17”，p1记录错误日志的时间
-    p1 = &cached_err_log_time[slot][0];
+    p1 = &cached_err_log_time[slot][0];//p (*p1)@30 fang shi da ying
 
     (void) ngx_sprintf(p1, "%4d/%02d/%02d %02d:%02d:%02d",
                        tm.ngx_tm_year, tm.ngx_tm_mon,
@@ -175,7 +176,7 @@ ngx_time_update(void)
 
 	/*ngx_memory_barrier是一个宏定义，在gcc编译器环境下是volatile关键字，作用是防止编译器对接下来的语句进行重排序优化，
 	因为只有把上面的语句执行完，才能接着进行时间更新，保证数据一致性*/
-    ngx_memory_barrier();
+    ngx_memory_barrier();//nei cun zha lan yi shang de cao zuo quan bu zhixing hou cai neng zhi xing xiamian de caozuo 
     // 调用nginx_time_update()目的就是更新这几个时间变量
     ngx_cached_time = tp;
     ngx_cached_http_time.data = p0;
@@ -293,11 +294,11 @@ ngx_gmtime(time_t t, ngx_tm_t *tp)
 
     n = (ngx_uint_t) t;
 
-    days = n / 86400;
+    days = n / 86400;//24*60*60 yitian de miao shu
 
     /* January 1, 1970 was Thursday */
 
-    wday = (4 + days) % 7;
+    wday = (4 + days) % 7;//1970 shi xing qi 4 
 
     n %= 86400;
     hour = n / 3600;

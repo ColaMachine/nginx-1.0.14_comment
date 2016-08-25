@@ -60,7 +60,7 @@ typedef uint64_t                    ngx_atomic_uint_t;
 #define NGX_ATOMIC_T_LEN            (sizeof("-9223372036854775808") - 1)
 
 #define ngx_atomic_cmp_set(lock, old, new)                                    \
-    OSAtomicCompareAndSwap64Barrier(old, new, (int64_t *) lock)
+    OSAtomicCompareAndSwap64Barrier(old, new, (int64_t *) lock)//if system  support then use this in 64bit system
 
 #define ngx_atomic_fetch_add(value, add)                                      \
     (OSAtomicAdd64(add, (int64_t *) value) - add)

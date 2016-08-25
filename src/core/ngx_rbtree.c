@@ -15,60 +15,60 @@
  */
 
 
-static ngx_inline void ngx_rbtree_left_rotate(ngx_rbtree_node_t **root,
+static ngx_inline void ngx_rbtree_left_rotate(ngx_rbtree_node_t **root,//左转树
     ngx_rbtree_node_t *sentinel, ngx_rbtree_node_t *node);
-static ngx_inline void ngx_rbtree_right_rotate(ngx_rbtree_node_t **root,
+static ngx_inline void ngx_rbtree_right_rotate(ngx_rbtree_node_t **root,//右转树
     ngx_rbtree_node_t *sentinel, ngx_rbtree_node_t *node);
 
 
 void
-ngx_rbtree_insert(ngx_thread_volatile ngx_rbtree_t *tree,
-    ngx_rbtree_node_t *node)
+ngx_rbtree_insert(ngx_thread_volatile ngx_rbtree_t *tree,//插入节点
+    ngx_rbtree_node_t *node)//插入的节点
 {
-    ngx_rbtree_node_t  **root, *temp, *sentinel;
+    ngx_rbtree_node_t  **root, *temp, *sentinel;//树节点 root temp 哨兵
 
     /* a binary tree insert */
 
-    root = (ngx_rbtree_node_t **) &tree->root;
-    sentinel = tree->sentinel;
+    root = (ngx_rbtree_node_t **) &tree->root;//定位root
+    sentinel = tree->sentinel;//定位哨兵
 
-    if (*root == sentinel) {
-        node->parent = NULL;
-        node->left = sentinel;
+    if (*root == sentinel) {//如果树为空
+        node->parent = NULL;//节点的父亲节点是空
+        node->left = sentinel;//左
         node->right = sentinel;
-        ngx_rbt_black(node);
+        ngx_rbt_black(node);//父节点一定得是黑色的
         *root = node;
 
         return;
     }
 
-    tree->insert(*root, node, sentinel);
+    tree->insert(*root, node, sentinel);//如果不是空的树进行插入 按照二叉搜索树插入节点
 
     /* re-balance tree */
 
-    while (node != *root && ngx_rbt_is_red(node->parent)) {
+    while (node != *root && ngx_rbt_is_red(node->parent)) {//重新平衡树 当父节点是红色的 并且不是根节点
 
-        if (node->parent == node->parent->parent->left) {
-            temp = node->parent->parent->right;
+        if (node->parent == node->parent->parent->left) {//如果是正向的
+            temp = node->parent->parent->right;//父节点的兄弟节点
 
-            if (ngx_rbt_is_red(temp)) {
-                ngx_rbt_black(node->parent);
-                ngx_rbt_black(temp);
-                ngx_rbt_red(node->parent->parent);
-                node = node->parent->parent;
+            if (ngx_rbt_is_red(temp)) {//I3 x为red p为red s为red 导出pp为black
+                ngx_rbt_black(node->parent);//p设为黑 
+                ngx_rbt_black(temp);//s 设为黑
+                ngx_rbt_red(node->parent->parent);//pp设置为红
+                node = node->parent->parent;//当前节点指向pp 不需要旋转
 
             } else {
-                if (node == node->parent->right) {
-                    node = node->parent;
-                    ngx_rbtree_left_rotate(root, sentinel, node);
+                if (node == node->parent->right) {//I2 x为red p为red s为black 右节点 
+                    node = node->parent;//当前节点指向p
+                    ngx_rbtree_left_rotate(root, sentinel, node);//进行左旋 即插入的节点替代p p转成插入节点的左节点
                 }
 
-                ngx_rbt_black(node->parent);
-                ngx_rbt_red(node->parent->parent);
-                ngx_rbtree_right_rotate(root, sentinel, node->parent->parent);
+                ngx_rbt_black(node->parent);//I1 x为red p为red s为black pp为black 设置p为黑
+                ngx_rbt_red(node->parent->parent);//设置pp为红
+                ngx_rbtree_right_rotate(root, sentinel, node->parent->parent);//右旋
             }
 
-        } else {
+        } else {//反向同理 方向相反
             temp = node->parent->parent->left;
 
             if (ngx_rbt_is_red(temp)) {
@@ -90,7 +90,7 @@ ngx_rbtree_insert(ngx_thread_volatile ngx_rbtree_t *tree,
         }
     }
 
-    ngx_rbt_black(*root);
+    ngx_rbt_black(*root);//无脑设置根节点为黑
 }
 
 
@@ -154,7 +154,7 @@ ngx_rbtree_insert_timer_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node,
     ngx_rbt_red(node);
 }
 
-
+//http://www.360doc.com/content/15/082609/10504424_494791577.shtml
 void
 ngx_rbtree_delete(ngx_thread_volatile ngx_rbtree_t *tree,
     ngx_rbtree_node_t *node)
@@ -167,15 +167,15 @@ ngx_rbtree_delete(ngx_thread_volatile ngx_rbtree_t *tree,
     root = (ngx_rbtree_node_t **) &tree->root;
     sentinel = tree->sentinel;
 
-    if (node->left == sentinel) {
+    if (node->left == sentinel) {//zuo情况1 2 删除节点y为单支节点或者叶子节点
         temp = node->right;
         subst = node;
 
-    } else if (node->right == sentinel) {
+    } else if (node->right == sentinel) {//情况1 2 删除节点y为单支节点或者叶子节点
         temp = node->left;
         subst = node;
 
-    } else {
+    } else {//情况1 3 删除节点y为双支节点
         subst = ngx_rbtree_min(node->right, sentinel);
 
         if (subst->left != sentinel) {
@@ -198,9 +198,9 @@ ngx_rbtree_delete(ngx_thread_volatile ngx_rbtree_t *tree,
         return;
     }
 
-    red = ngx_rbt_is_red(subst);
+    red = ngx_rbt_is_red(subst);//记录y的颜色
 
-    if (subst == subst->parent->left) {
+    if (subst == subst->parent->left) {//这里按照二叉树的性质，删除节点后重新生成二叉搜索树
         subst->parent->left = temp;
 
     } else {
@@ -251,29 +251,29 @@ ngx_rbtree_delete(ngx_thread_volatile ngx_rbtree_t *tree,
     node->parent = NULL;
     node->key = 0;
 
-    if (red) {
+    if (red) {//如果删除的节点y为red 直接退出
         return;
     }
 
     /* a delete fixup */
 
-    while (temp != *root && ngx_rbt_is_black(temp)) {
+    while (temp != *root && ngx_rbt_is_black(temp)) {//temp就是上文中的x，开始平衡红黑节点，知道x为红色，或者到达root
 
         if (temp == temp->parent->left) {
             w = temp->parent->right;
 
-            if (ngx_rbt_is_red(w)) {
+            if (ngx_rbt_is_red(w)) {//D1
                 ngx_rbt_black(w);
                 ngx_rbt_red(temp->parent);
                 ngx_rbtree_left_rotate(root, sentinel, temp->parent);
                 w = temp->parent->right;
             }
 
-            if (ngx_rbt_is_black(w->left) && ngx_rbt_is_black(w->right)) {
+            if (ngx_rbt_is_black(w->left) && ngx_rbt_is_black(w->right)) {//d2
                 ngx_rbt_red(w);
                 temp = temp->parent;
 
-            } else {
+            } else {//d3
                 if (ngx_rbt_is_black(w->right)) {
                     ngx_rbt_black(w->left);
                     ngx_rbt_red(w);
@@ -281,7 +281,7 @@ ngx_rbtree_delete(ngx_thread_volatile ngx_rbtree_t *tree,
                     w = temp->parent->right;
                 }
 
-                ngx_rbt_copy_color(w, temp->parent);
+                ngx_rbt_copy_color(w, temp->parent);//d4
                 ngx_rbt_black(temp->parent);
                 ngx_rbt_black(w->right);
                 ngx_rbtree_left_rotate(root, sentinel, temp->parent);

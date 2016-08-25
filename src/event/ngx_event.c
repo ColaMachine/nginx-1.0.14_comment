@@ -938,8 +938,8 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
 
         m = ngx_modules[i]->ctx;
-
-        if (m->create_conf) {
+// 第二次又调用了 src/event/modules/ngx_epoll_module.c:816
+        if (m->create_conf) {//i =4 ngx_event_create_conf (cycle=0x6a0050) at src/event/ngx_event.c:1148
             (*ctx)[ngx_modules[i]->ctx_index] = m->create_conf(cf->cycle);
             if ((*ctx)[ngx_modules[i]->ctx_index] == NULL) {
                 return NGX_CONF_ERROR;
@@ -948,10 +948,10 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     // 保存全局的conf
-    pcf = *cf;
-    cf->ctx = ctx;
-    cf->module_type = NGX_EVENT_MODULE;
-    cf->cmd_type = NGX_EVENT_CONF;
+    pcf = *cf;//p cf = 0x7fffffffe0c0而C语言在相同类型的变量间赋值时是直接内存复制的，即将他们的内存进行复制
+    cf->ctx = ctx;//p cf =0x7fffffffe090
+    cf->module_type = NGX_EVENT_MODULE;//p cf->module_type  1163022147
+    cf->cmd_type = NGX_EVENT_CONF; //
 
     // 完成配置文件中events{}这个block的解析，从而调用其下的所有的配置指令的回调函数
     // 这里是递归调用

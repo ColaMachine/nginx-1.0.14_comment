@@ -3,7 +3,7 @@
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
  */
-
+//main in 211 row
 
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -218,7 +218,7 @@ main(int argc, char *const *argv)
 #if (NGX_FREEBSD)
     ngx_debug_init(); //ngx_debug_init在FreeBSD和MacOSX平台有执行
 #endif
-	//ngx_strerror_init 用于初始化nginx服务器自定义的标准错误输出列表
+	//ngx_strerror_init 用于初始化nginx服务器自定义的标准错误输出列表 ready the ngx_sys_errlist
     if (ngx_strerror_init() != NGX_OK) {
         return 1;
     }
@@ -228,7 +228,7 @@ main(int argc, char *const *argv)
         return 1;
     }
 
-    if (ngx_show_version) {
+    if (ngx_show_version) {//没有解析到 -v 不执行
         ngx_write_stderr("nginx version: " NGINX_VER NGX_LINEFEED);
 
         if (ngx_show_help) {
@@ -285,12 +285,12 @@ main(int argc, char *const *argv)
     ngx_time_init();
 
 #if (NGX_PCRE)  //支持正则表达式
-    ngx_regex_init();
+    ngx_regex_init();//ngx_regex_malloc.c
 #endif
 
 	//master pid， 获取当前进程ID
     ngx_pid = ngx_getpid();
-    // 初始化日志，如打开日志文件
+    // 初始化日志，如打开日志文件//log =  ngx_log_t 里面的ngx_open_file_t      *file;    
     log = ngx_log_init(ngx_prefix);
     if (log == NULL) {
         return 1;
@@ -310,12 +310,12 @@ main(int argc, char *const *argv)
     init_cycle.log = log;
     ngx_cycle = &init_cycle;
     // 为cycle创建一个1024B的内存池
-    init_cycle.pool = ngx_create_pool(1024, log);
+    init_cycle.pool = ngx_create_pool(1024, log);//分配的size 要减去ngx_pool_t结构体自身的内存所占大小
     if (init_cycle.pool == NULL) {
         return 1;
     }
     // 保存参数到全局变量中
-    if (ngx_save_argv(&init_cycle, argc, argv) != NGX_OK) {
+    if (ngx_save_argv(&init_cycle, argc, argv) != NGX_OK) {//ngx_argv
         return 1;
     }
     // 初始化init_cycle中的一些如: conf_file，prefix，conf_prefix等字段
@@ -323,7 +323,7 @@ main(int argc, char *const *argv)
         return 1;
     }
     // 初始化系统相关变量，如内存页面大小ngx_pagesize,ngx_cacheline_size,最大连接数ngx_max_sockets等
-    if (ngx_os_init(log) != NGX_OK) {  // 这个ngx_os_init在不同操作系统调用不同的函数，根据系统参数来优化配置
+    if (ngx_os_init(log) != NGX_OK) {  //ngx_posix_init.c 这个ngx_os_init在不同操作系统调用不同的函数，根据系统参数来优化配置
         return 1;
     }
 
@@ -331,22 +331,22 @@ main(int argc, char *const *argv)
      * ngx_crc32_table_init() requires ngx_cacheline_size set in ngx_os_init()
      */
     // 初始化CRC表，提高效率，以后就不用计算了，直接用
-    if (ngx_crc32_table_init() != NGX_OK) {
+    if (ngx_crc32_table_init() != NGX_OK) {//src/core/ngx_crc32.c:111
         return 1;
     }
      // 继承sockets,继承来的socket将会放到init_cycle的listening数组
 	//继承的原因：在nginx服务器升级的情况下，保证web服务的平滑过渡，新的nginx能够继承旧nginx打开的socket
-    if (ngx_add_inherited_sockets(&init_cycle) != NGX_OK) {
+    if (ngx_add_inherited_sockets(&init_cycle) != NGX_OK) {// src/core/nginx.c:442
         return 1;
     }
     // 计算模块个数，并且设置各个模块顺序（索引）
-    ngx_max_module = 0;
+    ngx_max_module = 0;// ngx_command_t : http://book.51cto.com/art/201312/420058.htm *commands ngx_module_s :http://my.oschina.net/showcolors/blog/101169 
     for (i = 0; ngx_modules[i]; i++) {  // 这里面的ngx_modules会有非常多的模块，[ngx_core_module,ngx_errlog_module,ngx_conf_moduel]
-        ngx_modules[i]->index = ngx_max_module++;
+        ngx_modules[i]->index = ngx_max_module++;// p ngx_modules[0]->commands->name
     }
 
     // 对ngx_cycle结构进行初始化,这里是nginx启动核心之处！
-    cycle = ngx_init_cycle(&init_cycle);
+    cycle = ngx_init_cycle(&init_cycle);//ngx_cycle.c 44
     if (cycle == NULL) {
         if (ngx_test_config) {
             ngx_log_stderr(0, "configuration file %s test failed",
@@ -430,7 +430,7 @@ main(int argc, char *const *argv)
 
     return 0;
 }
-
+//main function end ***************************************************
 /*继承socket*/
 static ngx_int_t
 ngx_add_inherited_sockets(ngx_cycle_t *cycle)
@@ -438,10 +438,10 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
     u_char           *p, *v, *inherited;
     ngx_int_t         s;
     ngx_listening_t  *ls;
-
+    //#define NGINX_VAR          "NGINX"
     inherited = (u_char *) getenv(NGINX_VAR);  // 查看是否有设置NGINX这个环境变量
 
-    if (inherited == NULL) {
+    if (inherited == NULL) {//直接返回
         return NGX_OK;
     }
 
@@ -683,11 +683,11 @@ static ngx_int_t
 ngx_get_options(int argc, char *const *argv)
 {
     u_char     *p;
-    ngx_int_t   i;
+    ngx_int_t   i;//intptr_t
 	//遍历参数
     for (i = 1; i < argc; i++) {
 
-        p = (u_char *) argv[i];
+        p = (u_char *) argv[i];//字符串指针
 
         if (*p++ != '-') {
             ngx_log_stderr(0, "invalid option: \"%s\"", argv[i]);
@@ -699,49 +699,49 @@ ngx_get_options(int argc, char *const *argv)
             switch (*p++) {
 
             case '?':
-            case 'h':
+            case 'h'://hshow the version and the help infomation
                 ngx_show_version = 1;
                 ngx_show_help = 1;
-                break;
+                break;//break
 
-            case 'v':
+            case 'v'://show the version
                 ngx_show_version = 1;
-                break;
+                break;//break
 
-            case 'V':
+            case 'V'://show the version and the configure
                 ngx_show_version = 1;
                 ngx_show_configure = 1;
-                break;
+                break;//break
 
-            case 't':
+            case 't'://test 
                 ngx_test_config = 1;
                 break;
 
-            case 'q':
+            case 'q'://quiet mode
                 ngx_quiet_mode = 1;
                 break;
 
-            case 'p':
-                if (*p) {
+            case 'p'://prefix
+                if (*p) {//if -ps
                     ngx_prefix = p;
+                    goto next;//goto continue
+                }
+
+                if (argv[++i]) {//if has next argv array data
+                    ngx_prefix = (u_char *) argv[i];//ngx_prefix的值为下一个数组的值 
                     goto next;
                 }
 
-                if (argv[++i]) {
-                    ngx_prefix = (u_char *) argv[i];
-                    goto next;
-                }
-
-                ngx_log_stderr(0, "option \"-p\" requires directory name");
+                ngx_log_stderr(0, "option \"-p\" requires directory name");//如果既没有连接下去的字符串 也没有下一个数组值 就报错了
                 return NGX_ERROR;
 
             case 'c':
-                if (*p) {
-                    ngx_conf_file = p;
+                if (*p) {//如果连着写就是ngx_conf_file=后面跟着的字符串
+                    ngx_conf_file = p;//如果有连续字符串 那么ngx_conf_file就为指定的值
                     goto next;
                 }
 
-                if (argv[++i]) {
+                if (argv[++i]) {//如果没有连接的值但是有下一个数组值就
                     ngx_conf_file = (u_char *) argv[i];
                     goto next;
                 }
@@ -750,12 +750,12 @@ ngx_get_options(int argc, char *const *argv)
                 return NGX_ERROR;
 
             case 'g':
-                if (*p) {
+                if (*p) {//ngx_conf_params ??
                     ngx_conf_params = p;
                     goto next;
                 }
 
-                if (argv[++i]) {
+                if (argv[++i]) {//get the ngx_conf_params
                     ngx_conf_params = (u_char *) argv[i];
                     goto next;
                 }
@@ -763,11 +763,11 @@ ngx_get_options(int argc, char *const *argv)
                 ngx_log_stderr(0, "option \"-g\" requires parameter");
                 return NGX_ERROR;
 
-            case 's':
+            case 's'://
                 if (*p) {
-                    ngx_signal = (char *) p;
+                    ngx_signal = (char *) p;//get the signal
 
-                } else if (argv[++i]) {
+                } else if (argv[++i]) {//get the signal
                     ngx_signal = argv[i];
 
                 } else {
@@ -775,7 +775,7 @@ ngx_get_options(int argc, char *const *argv)
                     return NGX_ERROR;
                 }
 
-                if (ngx_strcmp(ngx_signal, "stop") == 0
+                if (ngx_strcmp(ngx_signal, "stop") == 0//只有stop quit reopen reload
                     || ngx_strcmp(ngx_signal, "quit") == 0
                     || ngx_strcmp(ngx_signal, "reopen") == 0
                     || ngx_strcmp(ngx_signal, "reload") == 0)
@@ -812,33 +812,33 @@ ngx_save_argv(ngx_cycle_t *cycle, int argc, char *const *argv)
     ngx_argv = (char **) argv;
 
 #else
-    size_t     len;
-    ngx_int_t  i;
+    size_t     len;//
+    ngx_int_t  i;//INT
 
-    ngx_os_argv = (char **) argv;
-    ngx_argc = argc;
+    ngx_os_argv = (char **) argv;//参数
+    ngx_argc = argc;//参数个数 debug的时候是3
 
-    ngx_argv = ngx_alloc((argc + 1) * sizeof(char *), cycle->log);
+    ngx_argv = ngx_alloc((argc + 1) * sizeof(char *), cycle->log);//4*8
     if (ngx_argv == NULL) {
         return NGX_ERROR;
     }
 
-    for (i = 0; i < argc; i++) {
-        len = ngx_strlen(argv[i]) + 1;
+    for (i = 0; i < argc; i++) {//argv[0]=/home/colamachine/git/nginx-1.0.14_comment/objs/nginx -c /home/colamachine/git/nginx-1.0.14_comment/conf/nginx.conf
+        len = ngx_strlen(argv[i]) + 1;//获取每个参数的长度
 
-        ngx_argv[i] = ngx_alloc(len, cycle->log);
+        ngx_argv[i] = ngx_alloc(len, cycle->log);//分配内存
         if (ngx_argv[i] == NULL) {
             return NGX_ERROR;
         }
-
-        (void) ngx_cpystrn((u_char *) ngx_argv[i], (u_char *) argv[i], len);
+//把argv 的值全部转到ngx_argv当中
+        (void) ngx_cpystrn((u_char *) ngx_argv[i], (u_char *) argv[i], len);//把字符串拷贝到
     }
 
     ngx_argv[i] = NULL;
 
 #endif
     // 返回系统环境目录，如win7下为：c:\ProgramData
-    ngx_os_environ = environ;
+    ngx_os_environ = environ;//LC_PAPER=zh_CN.UTF-8 p *environ：
 
     return NGX_OK;
 }
@@ -850,8 +850,8 @@ ngx_process_options(ngx_cycle_t *cycle)
     u_char  *p;
     size_t   len;
 	//ngx_prefix 表示nginx安装路径
-    if (ngx_prefix) { 
-        len = ngx_strlen(ngx_prefix);
+    if (ngx_prefix) { //不走这里
+        len = ngx_strlen(ngx_prefix);//活取nginx_prefix的长度
         p = ngx_prefix;
 
         if (!ngx_path_separator(*p)) {
@@ -895,39 +895,40 @@ ngx_process_options(ngx_cycle_t *cycle)
 #else
 
 #ifdef NGX_CONF_PREFIX
-        ngx_str_set(&cycle->conf_prefix, NGX_CONF_PREFIX);
+        ngx_str_set(&cycle->conf_prefix, NGX_CONF_PREFIX);//直接执行到这里 NGX_CONF_PREFIX=conf/ p *&cycle->conf_prefix->data
 #else
         ngx_str_set(&cycle->conf_prefix, NGX_PREFIX);
 #endif
-        ngx_str_set(&cycle->prefix, NGX_PREFIX);
+        ngx_str_set(&cycle->prefix, NGX_PREFIX);///usr/local/nginx
 
 #endif
     }
 
-    if (ngx_conf_file) {
-        cycle->conf_file.len = ngx_strlen(ngx_conf_file);
+    if (ngx_conf_file) {///home/colamachine/git/nginx-1.0.14_comment/conf/nginx.conf
+        cycle->conf_file.len = ngx_strlen(ngx_conf_file);///home/colamachine/git/nginx-1.0.14_comment/conf/nginx.conf
         cycle->conf_file.data = ngx_conf_file;
 
     } else {
         ngx_str_set(&cycle->conf_file, NGX_CONF_PATH);
     }
-
+//测试文件路径是不是/开头
     if (ngx_conf_full_name(cycle, &cycle->conf_file, 0) != NGX_OK) {
         return NGX_ERROR;
     }
 
     for (p = cycle->conf_file.data + cycle->conf_file.len - 1;
          p > cycle->conf_file.data;
-         p--)
+         p--)//从后往前逐个遍历
     {
         if (ngx_path_separator(*p)) {  // 将config_file路径按照分隔符“/”分割
             cycle->conf_prefix.len = p - ngx_cycle->conf_file.data + 1;
+			//nginx.conf 字符串和前面的/home/cola.../nginx-1.0.1comment/conf/分开 conf_preix保存后者
             cycle->conf_prefix.data = ngx_cycle->conf_file.data;
             break;
         }
     }
 
-    if (ngx_conf_params) {
+    if (ngx_conf_params) {//略过
         cycle->conf_param.len = ngx_strlen(ngx_conf_params);
         cycle->conf_param.data = ngx_conf_params;
     }
@@ -939,13 +940,13 @@ ngx_process_options(ngx_cycle_t *cycle)
     return NGX_OK;
 }
 
-
+	
 static void *
 ngx_core_module_create_conf(ngx_cycle_t *cycle)  // 这是core模块对外的create_conf的钩子
 {
     ngx_core_conf_t  *ccf; // 配置结构数据指针
 
-    ccf = ngx_pcalloc(cycle->pool, sizeof(ngx_core_conf_t)); // 创建配置结构数据
+    ccf = ngx_pcalloc(cycle->pool, sizeof(ngx_core_conf_t)); // 创建配置结构数据 216
     if (ccf == NULL) {
         return NULL;
     }

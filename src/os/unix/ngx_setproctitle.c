@@ -32,7 +32,7 @@ extern char **environ;
 static char *ngx_os_argv_last;
 
 ngx_int_t
-ngx_init_setproctitle(ngx_log_t *log)
+ngx_init_setproctitle(ngx_log_t *log)//chushi hua she zhi ng 初始化nginx设置进程标题
 {
     u_char      *p;
     size_t       size;
@@ -40,36 +40,36 @@ ngx_init_setproctitle(ngx_log_t *log)
 
     size = 0;
 
-    for (i = 0; environ[i]; i++) {
-        size += ngx_strlen(environ[i]) + 1;
-    }
+    for (i = 0; environ[i]; i++) {//LC_PAPER=zh_CN.UTF-8 p environ[0]
+        size += ngx_strlen(environ[i]) + 1;//计算总长度
+    }//大概有40多个
 
-    p = ngx_alloc(size, log);
+    p = ngx_alloc(size, log);//分配一个总长度内存
     if (p == NULL) {
         return NGX_ERROR;
     }
-
-    ngx_os_argv_last = ngx_os_argv[0];
-
-    for (i = 0; ngx_os_argv[i]; i++) {
-        if (ngx_os_argv_last == ngx_os_argv[i]) {
-            ngx_os_argv_last = ngx_os_argv[i] + ngx_strlen(ngx_os_argv[i]) + 1;
+    //0x7fffffffe791
+    ngx_os_argv_last = ngx_os_argv[0];///home/colamachine/git/nginx-1.0.14_comment/objs/nginx//原始main函数的代入参数argv
+//  ngx_os_argv[0] fffffffe791 [1]0x7fffffffe7c7 [2]0x7fffffffe7ca+58 =+0x3a= 804+1 =805   0x7fffffffe805  p strlen(ngx_os_argv[2])=58 =0x 48+10= 0x 3a
+    for (i = 0; ngx_os_argv[i]; i++) {//这个 ngx_os_argv 是 运行 命令  nginx -c nginx.conf类似的
+        if (ngx_os_argv_last == ngx_os_argv[i]) {//0 0x7fffffffe791 0x7fffffffe7c7  0x7fffffffe7ca
+            ngx_os_argv_last = ngx_os_argv[i] + ngx_strlen(ngx_os_argv[i]) + 1;//指向字符串最后位置  让ngx_os_argv_last一直指向到最后一个ngx_os_argv的末尾/0的位置
         }
-    }
+    }//这个argv[]与environ两个变量所占的内存是连续的，并且是environ紧跟在argv[]后面。
 
     for (i = 0; environ[i]; i++) {
-        if (ngx_os_argv_last == environ[i]) {
+        if (ngx_os_argv_last == environ[i]) {//???? 2   environ[0] 0x7fffffffe805
 
-            size = ngx_strlen(environ[i]) + 1;
-            ngx_os_argv_last = environ[i] + size;
+            size = ngx_strlen(environ[i]) + 1;//留一个/0 21
+            ngx_os_argv_last = environ[i] + size; //21
 
             ngx_cpystrn(p, (u_char *) environ[i], size);
-            environ[i] = (char *) p;
-            p += size;
+            environ[i] = (char *) p;//将environ的内容全部转存到堆中
+            p += size;//p往后移动准备接收下一个字符串
         }
     }
 
-    ngx_os_argv_last--;
+    ngx_os_argv_last--;//指向最后一个environ 的最后的值
 
     return NGX_OK;
 }

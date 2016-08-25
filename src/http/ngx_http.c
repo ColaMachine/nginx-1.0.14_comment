@@ -189,7 +189,8 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      */
 
     //调用对应的create_xxx_conf回调函数
-    //开始遍历    for (m = 0; ngx_modules[m]; m++) {
+    //开始遍历    
+     for (m = 0; ngx_modules[m]; m++) {
         if (ngx_modules[m]->type != NGX_HTTP_MODULE) {
             continue;
         }
@@ -235,7 +236,8 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         module = ngx_modules[m]->ctx;
         
-        //如果存在postconfiguratio则调用初始化,真正初始化模块之前需要调用preconfiguration来进行一些操作�?        if (module->preconfiguration) {
+        //如果存在postconfiguratio则调用初始化,真正初始化模块之前需要调用preconfiguration来进行一些操作�?        
+        if (module->preconfiguration) {
             if (module->preconfiguration(cf) != NGX_OK) {
                 return NGX_CONF_ERROR;
             }
@@ -262,7 +264,8 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     cmcf = ctx->main_conf[ngx_http_core_module.ctx_index];
     cscfp = cmcf->servers.elts;
 
-    //当http block完全parse完毕之后，就需要merge(main和srv或者srv和loc)相关的config了。不过在每次merge之前都会首先初始化main conf�?    for (m = 0; ngx_modules[m]; m++) {
+    //当http block完全parse完毕之后，就需要merge(main和srv或者srv和loc)相关的config了。不过在每次merge之前都会首先初始化main conf�?    
+    for (m = 0; ngx_modules[m]; m++) {
         if (ngx_modules[m]->type != NGX_HTTP_MODULE) {
             continue;
         }
@@ -290,7 +293,8 @@ ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
     /* create location trees */
-    //当merge完毕之后，然后就是初始化location tree，创建handler phase，调用postconfiguration，以及变量的初始�?    for (s = 0; s < cmcf->servers.nelts; s++) {
+    //当merge完毕之后，然后就是初始化location tree，创建handler phase，调用postconfiguration，以及变量的初始�?   
+    for (s = 0; s < cmcf->servers.nelts; s++) {
 
         clcf = cscfp[s]->ctx->loc_conf[ngx_http_core_module.ctx_index];
 

@@ -15,7 +15,7 @@ u_char  ngx_linux_kern_osrelease[50];
 int     ngx_linux_rtsig_max;
 
 
-static ngx_os_io_t ngx_linux_io = {
+static ngx_os_io_t ngx_linux_io = {// ding yige shu zu  http://blog.chinaunix.net/uid-20628302-id-3159465.html
     ngx_unix_recv,
     ngx_readv_chain,
     ngx_udp_unix_recv,
@@ -33,20 +33,20 @@ static ngx_os_io_t ngx_linux_io = {
 ngx_int_t
 ngx_os_specific_init(ngx_log_t *log)
 {
-    struct utsname  u;
+    struct utsname  u;//#include <sys/utsname.h>        /* uname() */
 
-    if (uname(&u) == -1) {
+    if (uname(&u) == -1) {//show the info of operator system
         ngx_log_error(NGX_LOG_ALERT, log, ngx_errno, "uname() failed");
         return NGX_ERROR;
     }
 
-    (void) ngx_cpystrn(ngx_linux_kern_ostype, (u_char *) u.sysname,
+    (void) ngx_cpystrn(ngx_linux_kern_ostype, (u_char *) u.sysname,//u_char[50]   ngx_linux_kern_ostype   u.sysname = "linux"
                        sizeof(ngx_linux_kern_ostype));
 
-    (void) ngx_cpystrn(ngx_linux_kern_osrelease, (u_char *) u.release,
+    (void) ngx_cpystrn(ngx_linux_kern_osrelease, (u_char *) u.release,//release "3.13.0-85-generic
                        sizeof(ngx_linux_kern_osrelease));
 
-#if (NGX_HAVE_RTSIG)
+#if (NGX_HAVE_RTSIG)//no way  tiao guo
     {
     int        name[2];
     size_t     len;
@@ -72,9 +72,9 @@ ngx_os_specific_init(ngx_log_t *log)
     }
 #endif
 
-    ngx_os_io = ngx_linux_io;
+    ngx_os_io = ngx_linux_io;//jump here  defined @ head of file ding yi zai  ben wenjian kai tou 
 
-    return NGX_OK;
+    return NGX_OK;//return ngx_posix_init.c:39
 }
 
 

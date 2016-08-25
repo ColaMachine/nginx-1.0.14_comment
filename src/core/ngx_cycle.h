@@ -44,7 +44,7 @@ struct ngx_cycle_s {
      每个数组成员又是一个指针，指向另一个存储着指针的数组，因此会看到void ****
 
     请见陶辉所著《深入理解Nginx-模块开发与架构解析》一书302页插图。
-    另外，这个图也不错：http://img.my.csdn.net/uploads/201202/9/0_1328799724GTUk.gif
+    另外，这个图也不错：http://img.my.csdn.net/uploads/201202/9/0_1328799724GTUk.gif http://blog.csdn.net/livelylittlefish/article/details/7247080
     */
     void                  ****conf_ctx; 
     // 内存池

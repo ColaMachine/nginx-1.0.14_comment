@@ -97,8 +97,8 @@ ngx_array_push(ngx_array_t *a)
         }
     }
 
-    elt = (u_char *) a->elts + a->size * a->nelts;
-    a->nelts++;
+    elt = (u_char *) a->elts + a->size * a->nelts;//a->size  16  a:ngx_array_t a->nelts:0 elts: 0x6950a0  elt=0x6950a0
+    a->nelts++; //=1
 
     return elt;
 }

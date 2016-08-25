@@ -25,7 +25,7 @@ ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
                    "read: %d, %p, %uz, %O", file->fd, buf, size, offset);
 
 #if (NGX_HAVE_PREAD)
-
+//pread是一个函数，用于带偏移量地原子的从文件中读取数据。
     n = pread(file->fd, buf, size, offset);
 
     if (n == -1) {
@@ -34,7 +34,7 @@ ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
         return NGX_ERROR;
     }
 
-#else
+#else//bu zhi xing
 
     if (file->sys_offset != offset) {
         if (lseek(file->fd, offset, SEEK_SET) == -1) {
@@ -58,7 +58,7 @@ ngx_read_file(ngx_file_t *file, u_char *buf, size_t size, off_t offset)
 
 #endif
 
-    file->offset += n;
+    file->offset += n;//2685
 
     return n;
 }

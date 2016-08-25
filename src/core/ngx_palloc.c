@@ -18,21 +18,21 @@ ngx_create_pool(size_t size, ngx_log_t *log)
 {
     ngx_pool_t  *p;
 
-    p = ngx_memalign(NGX_POOL_ALIGNMENT, size, log);  // 分配内存函数，uinx,windows分开走
+    p = ngx_memalign(NGX_POOL_ALIGNMENT, size, log);  // 分配内存函数，uinx,windows分开走 分配一款size大小的内存
     if (p == NULL) {
         return NULL;
     }
-
-    p->d.last = (u_char *) p + sizeof(ngx_pool_t); //初始指向 ngx_pool_t 结构体后面
-    p->d.end = (u_char *) p + size; //整个结构的结尾后面
-    p->d.next = NULL;
+//http://www.linuxidc.com/Linux/2011-08/41860.htm 有介绍结构
+    p->d.last = (u_char *) p + sizeof(ngx_pool_t); //初始指向 ngx_pool_t 结构体后面 当前内存池分配到此处，即下一次分配从此处开始  0x69f470
+    p->d.end = (u_char *) p + size; //整个结构的结尾后面  内存池结束位置  0x69f820
+    p->d.next = NULL;//
     p->d.failed = 0;
 
 	//sizeof(ngx_pool_t)用来存储自身
-    size = size - sizeof(ngx_pool_t);
+    size = size - sizeof(ngx_pool_t);//剩下的空间 
     p->max = (size < NGX_MAX_ALLOC_FROM_POOL) ? size : NGX_MAX_ALLOC_FROM_POOL; //最大不超过 NGX_MAX_ALLOC_FROM_POOL,也就是getpagesize()-1 大小
-
-    p->current = p;
+    //max 大小
+    p->current = p;//指向自身
     p->chain = NULL;
     p->large = NULL;
     p->cleanup = NULL;
@@ -120,12 +120,12 @@ ngx_palloc(ngx_pool_t *pool, size_t size)
     u_char      *m;
     ngx_pool_t  *p;
 
-    if (size <= pool->max) {
+    if (size <= pool->max) {//如果分配的大小小于可分配内容 说明可以直接分配内存
 
-        p = pool->current;
+        p = pool->current;//指向当前pool
 
-        do {
-            m = ngx_align_ptr(p->d.last, NGX_ALIGNMENT); // 对齐内存指针，加快存取速度
+        do {//d.last = 0x6a0050 m=0x6a0050
+            m = ngx_align_ptr(p->d.last, NGX_ALIGNMENT); // 对齐内存指针，加快存取速度 core/ngx_config.h" 137L, 2720C    
 
             if ((size_t) (p->d.end - m) >= size) {
                 p->d.last = m + size;
@@ -148,14 +148,14 @@ void *
 ngx_pnalloc(ngx_pool_t *pool, size_t size)
 {
     u_char      *m;
-    ngx_pool_t  *p;
+    ngx_pool_t  *p;//new ngx_pool_t p dingyi zai ngx_palloc.h
 
-    if (size <= pool->max) {
+    if (size <= pool->max) {//每个内存块的大小
 
-        p = pool->current;
+        p = pool->current;//当前结构体
 
         do {
-            m = p->d.last;
+            m = p->d.last;//ngx_pool_data_t
 
             if ((size_t) (p->d.end - m) >= size) {
                 p->d.last = m + size;

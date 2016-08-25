@@ -116,12 +116,12 @@ struct ngx_command_s {
 
 
 struct ngx_open_file_s {
-    ngx_fd_t              fd;
-    ngx_str_t             name;
+    ngx_fd_t              fd;//文件句柄
+    ngx_str_t             name;//文件名称
 
-    u_char               *buffer;
-    u_char               *pos;
-    u_char               *last;
+    u_char               *buffer;//文件内容
+    u_char               *pos;//当前位置
+    u_char               *last;//文件末尾
 
 #if 0
     /* e.g. append mode, error_log */
